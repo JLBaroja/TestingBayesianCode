@@ -1,0 +1,5 @@
+model{	      
+		mean~dnorm(mean_prior,1/sd_prior^2)
+		sd~dnorm(logmean_prior,1/logsd_prior^2)
+		y~dnorm(mean,1/sd^2)
+		}

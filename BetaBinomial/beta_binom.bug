@@ -1,0 +1,4 @@
+model{	      
+		theta~dbeta(shape1_prior,shape2_prior)
+		y~dbin(theta,20)
+		}
