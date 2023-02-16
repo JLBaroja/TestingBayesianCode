@@ -16,7 +16,7 @@ posterior_quantile <- function(mean_prior,sd_prior,
 	unobserved <- c('mean','sd')
 	write('model{	      
 		mean~dnorm(mean_prior,1/sd_prior^2)
-		sd~dnorm(logmean_prior,1/logsd_prior^2)
+		sd~dlnorm(logmean_prior,1/logsd_prior^2)
 		y~dnorm(mean,1/sd^2)
 		}','normal.bug')
 		bayes <- jags(data=observed,
