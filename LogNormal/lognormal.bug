@@ -1,0 +1,5 @@
+model{	      
+		mean~dnorm(mean_prior,1/sd_prior^2)
+		sd~dgamma(shape_prior,rate_prior)
+		y~dlnorm(mean,1/sd^2)
+		}
