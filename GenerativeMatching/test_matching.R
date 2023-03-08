@@ -3,11 +3,35 @@
 rm(list = ls())
 library('R2jags')
 
+## How many iterations?
+nIterations <- 1000
+
+## Collect all priors
+priors <- list(mean_alpha = 0.0,
+               sd_alpha   = 1.0,
+               mean_beta  = 0.0,
+               sd_beta    = 1.0,
+               shape_tau  = 2.0,
+               rate_tau   = 0.5)
+
+## Collect information about the experiment
+design <- list(n_sessions = 10)
+
 # Get parameters from prior
 get_parameters_from_prior <- function(priors) {
-  alpha0 <- rnorm (n = 1, mean  = priors$mean_alpha, sd   = priors$sd_alpha)
-  beta0  <- rnorm (n = 1, mean  = priors$mean_beta , sd   = priors$sd_beta )
-  tau0   <- rgamma(n = 1, shape = priors$shape_tau , rate = priors$rate_tau)
+  alpha0 <- truncnorm::rtruncnorm(n    =  1, 
+                                  a    = -2.0,
+                                  b    =  2.0,
+                                  mean = priors$mean_alpha, 
+                                  sd   = priors$sd_alpha)
+  beta0  <- truncnorm::rtruncnorm(n    =  1, 
+                                  a    = -2.0,
+                                  b    =  2.0,
+                                  mean = priors$mean_beta,
+                                  sd   = priors$sd_beta )
+  tau0   <- rgamma(n     = 1, 
+                   shape = priors$shape_tau,
+                   rate  = priors$rate_tau)
 
   parameters <- list(alpha0 = alpha0, 
                      beta0  = beta0 ,
@@ -57,8 +81,8 @@ get_mcmc_from_data <- function(data, priors, design) {
   unobserved <- c('alpha', 'beta', 'tau', 'lambda_Br', 'lambda_Bl')
   write(
     'model{
-         alpha ~ dnorm(mean_alpha_prior, pow(sd_alpha_prior, -2))
-         beta  ~ dnorm(mean_beta_prior , pow(sd_beta_prior , -2))
+         alpha ~ dnorm(mean_alpha_prior, pow(sd_alpha_prior, -2))T(-2,2)
+         beta  ~ dnorm(mean_beta_prior , pow(sd_beta_prior , -2))T(-2,2)
          tau   ~ dgamma(shape_tau_prior, rate_tau_prior)T(0.01,)
          for(i in 1:n_obs){
              lambda_Br[i] ~ dlnorm( alpha/2 + beta * log(Wr[i])/2, tau)
@@ -80,16 +104,13 @@ get_mcmc_from_data <- function(data, priors, design) {
 
 get_quantiles_from_mcmc <- function(mcmc, parameters) {
 
-  alpha <- mcmc$BUGSoutput$sims.list$alpha # Posterior sample
-  beta  <- mcmc$BUGSoutput$sims.list$beta  # Posterior sample
-  tau   <- mcmc$BUGSoutput$sims.list$tau   # Posterior sample
+  alpha <- mcmc$BUGSoutput$sims.list$alpha
+  beta  <- mcmc$BUGSoutput$sims.list$beta
+  tau   <- mcmc$BUGSoutput$sims.list$tau
 
-  L <- dim(alpha)[1] # Size of the posterior sample
-
-  # Compute quantile (1/L)*sum(I_{th0>th_m})
-  q0_alpha <- sum(parameters$alpha0 > alpha) / L
-  q0_beta  <- sum(parameters$beta0  > beta ) / L
-  q0_tau   <- sum(parameters$tau0   > tau  ) / L
+  q0_alpha <- mean(parameters$alpha0 > alpha)
+  q0_beta  <- mean(parameters$beta0  > beta )
+  q0_tau   <- mean(parameters$tau0   > tau  )
 
   quantiles <- list(
     q0_alpha = q0_alpha,
@@ -103,22 +124,12 @@ get_quantiles_from_mcmc <- function(mcmc, parameters) {
 
 # Do the thing
 
-## Collect all priors
-priors <- list(mean_alpha = 0.0,
-               sd_alpha   = 1.0,
-               mean_beta  = 0.0,
-               sd_beta    = 1.0,
-               shape_tau  = 2.0,
-               rate_tau   = 0.5)
-
-## Collect information about the experiment
-design <- list(n_sessions = 10)
-
+## Compute quantiles
 quantiles_alpha <- NA
 quantiles_beta  <- NA
 quantiles_tau   <- NA
 
-for (i in 1:1000) {
+for (i in 1:nIterations) {
   parameters <- get_parameters_from_prior(priors = priors)
   data       <- get_data_from_parameters (parameters = parameters, design = design)
   mcmc       <- get_mcmc_from_data       (data = data, priors = priors, design = design)
@@ -130,7 +141,14 @@ for (i in 1:1000) {
   print(i)
 }
 
+## Save cache
+timestamp <- format(Sys.time() , "%Y%m%d_%H%M%S")
+save(file = paste0('test_matching_', timestamp, '.RData'), 'quantiles_alpha', 'quantiles_beta', 'quantiles_tau')
+
+## Plot histograms
+pdf(file = paste0('test_matching_', timestamp, '.pdf'), width = 6, height = 4)
 layout(1:3)
 hist(quantiles_alpha, breaks = 50)
 hist(quantiles_beta , breaks = 50)
 hist(quantiles_tau  , breaks = 50)
+dev.off()

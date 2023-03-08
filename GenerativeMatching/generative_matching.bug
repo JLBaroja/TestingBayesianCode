@@ -1,12 +1,11 @@
-model{	      
-			alpha ~ dnorm(mean_alpha_prior,1/(sd_alpha_prior)^2)
-			beta ~ dnorm(mean_beta_prior,1/(sd_beta_prior)^2)
-				tau ~ dgamma(shape_tau_prior,rate_tau_prior)T(0.01,)
-				#tau ~ dlnorm(shape_tau_prior,rate_tau_prior)
-				for(i in 1:n_obs){
-					lambda_Br[i] ~ dlnorm(alpha/2+beta*log(Wr[i])/2,tau)
-					lambda_Bl[i] ~ dlnorm(-alpha/2-beta*log(Wl[i])/2,tau)	 
-					Br[i] ~ dpois(lambda_Br[i])
-					Bl[i] ~ dpois(lambda_Bl[i])
-				}
-			}
+model{
+         alpha ~ dnorm(mean_alpha_prior, pow(sd_alpha_prior, -2))T(-2,2)
+         beta  ~ dnorm(mean_beta_prior , pow(sd_beta_prior , -2))T(-2,2)
+         tau   ~ dgamma(shape_tau_prior, rate_tau_prior)T(0.01,)
+         for(i in 1:n_obs){
+             lambda_Br[i] ~ dlnorm( alpha/2 + beta * log(Wr[i])/2, tau)
+             lambda_Bl[i] ~ dlnorm(-alpha/2 - beta * log(Wl[i])/2, tau)
+             Br[i] ~ dpois(lambda_Br[i])
+             Bl[i] ~ dpois(lambda_Bl[i])
+         }
+     }
