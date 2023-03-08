@@ -4,13 +4,13 @@ rm(list = ls())
 library('R2jags')
 
 ## How many iterations?
-nIterations <- 1000
+nIterations <- 10000
 
 ## Collect all priors
 priors <- list(mean_alpha = 0.0,
-               sd_alpha   = 1.0,
+               sd_alpha   = 1/sqrt(.1),
                mean_beta  = 0.0,
-               sd_beta    = 1.0,
+               sd_beta    = 1/sqrt(.1),
                shape_tau  = 2.0,
                rate_tau   = 0.5)
 
@@ -61,7 +61,7 @@ get_data_from_parameters <- function(parameters, design) {
   return(data)
 }
 
-
+# Get MCMC from data
 get_mcmc_from_data <- function(data, priors, design) {
   # Compute a (to-be-tested) posterior sample [th1,th2,...,thL]
   # given the sample from the likelihood
@@ -102,6 +102,7 @@ get_mcmc_from_data <- function(data, priors, design) {
   return(bayes)
 }
 
+# Get quantiles from MCMC
 get_quantiles_from_mcmc <- function(mcmc, parameters) {
 
   alpha <- mcmc$BUGSoutput$sims.list$alpha
@@ -122,9 +123,7 @@ get_quantiles_from_mcmc <- function(mcmc, parameters) {
 }
 
 
-# Do the thing
-
-## Compute quantiles
+# Compute quantiles
 quantiles_alpha <- NA
 quantiles_beta  <- NA
 quantiles_tau   <- NA
@@ -141,11 +140,11 @@ for (i in 1:nIterations) {
   print(i)
 }
 
-## Save cache
+# Save cache
 timestamp <- format(Sys.time() , "%Y%m%d_%H%M%S")
 save(file = paste0('test_matching_', timestamp, '.RData'), 'quantiles_alpha', 'quantiles_beta', 'quantiles_tau')
 
-## Plot histograms
+# Plot histograms
 pdf(file = paste0('test_matching_', timestamp, '.pdf'), width = 6, height = 4)
 layout(1:3)
 hist(quantiles_alpha, breaks = 50)
