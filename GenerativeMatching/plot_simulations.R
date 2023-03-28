@@ -1,0 +1,6 @@
+pdf('posterior_quantiles.pdf',width=4,height=12)
+layout(1:3)
+hist(quantiles_alpha,breaks=60)
+hist(quantiles_beta,breaks=60)
+hist(quantiles_tau,breaks=60)
+dev.off()
